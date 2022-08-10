@@ -273,66 +273,64 @@ def get_unique_inst_filt(table):
 
     return(inst_filts)
 
-filename=sys.argv[1]
-distance=sys.argv[2]
-ra=sys.argv[3]
-dec=sys.argv[4]
+def do_classification(filename, distance, ra, dec):
 
-coord = SkyCoord(ra, dec, unit=(u.hour, u.deg))
-ebv = sfd(coord) * 0.86
+    coord = SkyCoord(ra, dec, unit=(u.hour, u.deg))
+    ebv = sfd(coord) * 0.86
 
-zpt_data = Table.read('zeropoints.dat', format='ascii')
+    zpt_data = Table.read('zeropoints.dat', format='ascii')
 
-table = load_and_parse_table(os.path.join('data', sys.argv[1]), dist=distance,
-    ebv=ebv, zpt_data=zpt_data)
-inst_filts = get_unique_inst_filt(table)
+    table = load_and_parse_table(os.path.join('data', filename), dist=distance,
+        ebv=ebv, zpt_data=zpt_data)
+    inst_filts = get_unique_inst_filt(table)
 
-mist_dir = '/Users/ckilpatrick/scripts/python/progenitors/sed/data/mist'
+    mist_dir = '/Users/ckilpatrick/scripts/python/progenitors/sed/data/mist'
 
-models = load_mist_models(mist_dir, inst_filts)
+    models = load_mist_models(mist_dir, inst_filts)
 
-classification_table = Table([[0.],[0.],[0.],[0.]], names=('mass','phase',
-    'ra','dec'))
+    classification_table = Table([[0.],[0.],[0.],[0.]], names=('mass','phase',
+        'ra','dec'))
 
-for row in table:
+    for row in table:
 
-    total_chi2 = np.zeros(70334)
-    for key in table.keys():
-        if (('WFC3' in key or 'ACS' in key or 'WFPC2' in key) and
-            not key.endswith('ERR')):
+        total_chi2 = np.zeros(70334)
+        for key in table.keys():
+            if (('WFC3' in key or 'ACS' in key or 'WFPC2' in key) and
+                not key.endswith('ERR')):
 
-            inst = key.split('_')[0]
-            filt = key.split('_')[1]
+                inst = key.split('_')[0]
+                filt = key.split('_')[1]
 
-            mag = row[key]
-            if np.isnan(float(mag)):
-                continue
-            magerr = row[key+'_ERR']
+                mag = row[key]
+                if np.isnan(float(mag)):
+                    continue
+                magerr = row[key+'_ERR']
 
-            chi2 = (models[inst][inst+'_'+filt].data-mag)**2 / (magerr**2)
+                chi2 = (models[inst][inst+'_'+filt].data-mag)**2 / (magerr**2)
 
-            total_chi2 += chi2
+                total_chi2 += chi2
 
-    idx = np.argmin(total_chi2)
+        idx = np.argmin(total_chi2)
 
-    if 'WFC3' in models.keys():
-        data=models['WFC3'][idx]
-    elif 'ACS' in models.keys():
-        data=models['ACS'][idx]
-    elif 'WFPC2' in models.keys():
-        data=models['WFPC2'][idx]
+        if 'WFC3' in models.keys():
+            data=models['WFC3'][idx]
+        elif 'ACS' in models.keys():
+            data=models['ACS'][idx]
+        elif 'WFPC2' in models.keys():
+            data=models['WFPC2'][idx]
 
-    classification_table.add_row([data['mass'],data['phase'],row['RA'],row['DEC']])
+        classification_table.add_row([data['mass'],data['phase'],row['RA'],row['DEC']])
 
-mask = (classification_table['mass'] > 18.0) & (classification_table['phase']==0)
-if len(classification_table[mask])>0:
-    coords = SkyCoord(classification_table[mask]['ra'],
-        classification_table[mask]['dec'], unit=(u.deg, u.deg))
-    seps = coord.separation(coords)
+    mask = (classification_table['mass'] > 18.0) & (classification_table['phase']==0)
+    if len(classification_table[mask])>0:
+        coords = SkyCoord(classification_table[mask]['ra'],
+            classification_table[mask]['dec'], unit=(u.deg, u.deg))
+        seps = coord.separation(coords)
 
-    idx = np.argmin(seps)
-    sep_physical = seps[idx].radian * dist * 1.0e6
-    print(sep_physical)
-
-else:
-    print('ERROR: no stars classified as main sequence O-type')
+        idx = np.argmin(seps)
+        sep_physical = seps[idx].radian * dist * 1.0e6
+        print(f'Separation is {sep_physical}')
+        return(sep_physical)
+    else:
+        print('ERROR: no stars classified as main sequence O-type')
+        return(None)
