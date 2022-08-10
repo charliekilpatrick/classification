@@ -314,7 +314,6 @@ for row in table:
             total_chi2 += chi2
 
     idx = np.argmin(total_chi2)
-    print(idx)
 
     if 'WFC3' in models.keys():
         data=models['WFC3'][idx]
@@ -323,11 +322,12 @@ for row in table:
     elif 'WFPC2' in models.keys():
         data=models['WFPC2'][idx]
 
-    classification_table.add_row([data['mass'],data['phase'],data['RA'],data['DEC']])
+    classification_table.add_row([data['mass'],data['phase'],row['RA'],row['DEC']])
 
 mask = (classification_table['mass'] > 18.0) & (classification_table['phase']==0)
-if len(table[mask])>0:
-    coords = SkyCoord(table[mask]['ra'], table[mask]['dec'], unit=(u.deg, u.deg))
+if len(classification_table[mask])>0:
+    coords = SkyCoord(classification_table[mask]['ra'],
+        classification_table[mask]['dec'], unit=(u.deg, u.deg))
     seps = coord.separation(coords)
 
     idx = np.argmin(seps)
