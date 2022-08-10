@@ -1,6 +1,29 @@
 from astropy.table import Table
 import os
 import glob
+import re
+
+def parse_inst_filt(var):
+
+    if 'wfc3' in var.lower():
+        isnt = 'WFC3'
+    elif 'acs' in var.lower():
+        inst = 'ACS'
+    elif 'wfpc2' in var.lower():
+        inst = 'WFPC2'
+    else:
+        raise Exception(f'COULD NOT PARSE INST FROM {var}')
+
+    reg='\.(f.+)\.'
+    m = re.findall(reg, var)
+    if len(m)!=1:
+        raise Exception(f'COULD NOT PARSE FILT FROM {var}')
+    else:
+        filt = m[0]
+
+    val = inst+'_'+m[0].upper()
+
+    return(val)
 
 
 # For an input list of instruments and filters, load all relevant mist data 
@@ -30,7 +53,7 @@ def load_mist_models(mistdir, inst_filts):
             mass = os.path.basename(cmd).replace('M.track.eep.cmd','')
             mass = float(mass) * 1.0e-4
 
-            table = Table.read(cmd)
+            table = Table.read(cmd, format='ascii')
             table.add_column(Column([mass]*len(table), name='mass'))
 
             use_cols = ['star_age','log_Teff','log_L']
@@ -57,6 +80,14 @@ def load_mist_models(mistdir, inst_filts):
     return(all_tables)
 
 
+def load_and_parse_table(table_name):
 
+    table = Table.read(table_name, format='ascii')
 
+    inst_filts = []
+    for key in table.keys():
+        if key=='MAG_AUTO':
+            name=parse_inst_filt(table_name)
+
+            colname = inst_
     
