@@ -12,9 +12,13 @@ import numpy as np
 sf11rv = {
     'WFPC2_F218W':7.760,
     'WFPC2_F300W':4.902,
+    'WFPC2_F336W':4.424,
+    'WFPC2_F487N':3.175,
     'WFPC2_F450W':3.410,
+    'WFPC2_F547M':2.735,
     'WFPC2_F555W':2.755,
     'WFPC2_F606W':2.415,
+    'WFPC2_F675W':2.151,
     'WFPC2_F702W':1.948,
     'WFPC2_F814W':1.549,
     'WFC3_IR_F105W':0.969,
@@ -33,6 +37,7 @@ sf11rv = {
     'WFC3_UVIS_F438W':3.623,
     'WFC3_UVIS_F475W':3.248,
     'WFC3_UVIS_F475X':3.116,
+    'WFC3_UVIS_F547M':2.756,
     'WFC3_UVIS_F555W':2.855,
     'WFC3_UVIS_F600LP':1.781,
     'WFC3_UVIS_F606W':2.488,
@@ -41,12 +46,14 @@ sf11rv = {
     'WFC3_UVIS_F814W':1.536,
     'WFC3_UVIS_F850LP':1.208,
     'ACS_CLEAR':2.436,
+    'ACS_WFC_F330W':4.472,
     'ACS_WFC_F435W':3.610,
     'ACS_WFC_F475W':3.268,
     'ACS_WFC_F550M':2.620,
     'ACS_WFC_F555W':2.792,
     'ACS_WFC_F606W':2.471,
     'ACS_WFC_F625W':2.219,
+    'ACS_WFC_F658N':2.224,
     'ACS_WFC_F775W':1.629,
     'ACS_WFC_F814W':1.526,
     'ACS_WFC_F850LP':1.243,
@@ -126,8 +133,6 @@ def load_mist_models(mistdir, inst_filts):
             continue
 
         for cmd in glob.glob(os.path.join(subdir, '*.track.eep.cmd')):
-
-            print(f'Loading {cmd}')
 
             mass = os.path.basename(cmd).replace('M.track.eep.cmd','')
             mass = float(mass) * 1.0e-4
@@ -304,9 +309,13 @@ def do_classification(filename, distance, ra, dec):
                 mag = row[key]
                 if np.isnan(float(mag)):
                     continue
+                check_key = inst+'_'+filt
+                if check_key not in list(models[inst].keys()):
+                    continue
+
                 magerr = row[key+'_ERR']
 
-                chi2 = (models[inst][inst+'_'+filt].data-mag)**2 / (magerr**2)
+                chi2 = (models[inst][check_key].data-mag)**2 / (magerr**2)
 
                 total_chi2 += chi2
 
@@ -328,7 +337,7 @@ def do_classification(filename, distance, ra, dec):
         seps = coord.separation(coords)
 
         idx = np.argmin(seps)
-        sep_physical = seps[idx].radian * dist * 1.0e6
+        sep_physical = seps[idx].radian * distance * 1.0e6
         print(f'Separation is {sep_physical}')
         return(sep_physical)
     else:
